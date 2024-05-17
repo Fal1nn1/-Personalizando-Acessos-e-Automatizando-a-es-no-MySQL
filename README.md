@@ -36,3 +36,33 @@ GROUP BY empregados.nome;
 CREATE USER 'usuario_gerente'@'localhost' IDENTIFIED BY 'senha_segura';
 GRANT SELECT ON company.empregados TO 'usuario_gerente'@'localhost';
 GRANT SELECT ON company.departamentos TO 'usuario_gerente'@'localhost';
+
+CREATE TRIGGER `pre_delete_user_remove_order_history`
+BEFORE DELETE ON `base`.`usuarios`
+FOR EACH ROW
+DO
+    -- Check if the user has an order history
+    IF EXISTS (SELECT 1 FROM `ecommerce`.`pedidos` WHERE cliente_id = OLD.id) THEN
+        -- Remove the user's order history
+        DELETE FROM `ecommerce`.`pedidos` WHERE cliente_id = OLD.id;
+    END IF;
+END;
+
+CREATE TRIGGER `pre_delete_user_remove_product_reviews`
+BEFORE DELETE ON `base`.`usuarios`
+FOR EACH ROW
+DO
+    -- Check if the user has product reviews
+    IF EXISTS (SELECT 1 FROM `ecommerce`.`avaliacoes_produtos` WHERE cliente_id = OLD.id) THEN
+        -- Remove the user's product reviews
+        DELETE FROM `ecommerce`.`avaliacoes_produtos` WHERE cliente_id = OLD.id;
+    END IF;
+END;
+
+CREATE TRIGGER `pre_update_employee_adjust_salaries`
+BEFORE UPDATE ON `base`.`colaboradores`
+FOR EACH ROW
+DO
+    -- Update the net salary based on the new base salary and tax deductions
+    SET NEW.salario_liquido = NEW.salario_base - (NEW.salario_base * 0.3);
+END;
